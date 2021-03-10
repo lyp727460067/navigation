@@ -115,7 +115,7 @@ angle_diff(double a, double b)
     return(d2);
 }
 
-static const std::string scan_topic_ = "scan";
+static const std::string scan_topic_ = "/scan";
 
 /* This function is only useful to have the whole code work
  * with old rosbags that have trailing slashes for their frames
@@ -670,8 +670,8 @@ void AmclNode::runFromBag(const std::string &in_bag_fn, bool trigger_global_loca
   rosbag::Bag bag;
   bag.open(in_bag_fn, rosbag::bagmode::Read);
   std::vector<std::string> topics;
-  topics.push_back(std::string("tf"));
-  std::string scan_topic_name = "base_scan"; // TODO determine what topic this actually is from ROS
+ // topics.push_back(std::string("tf"));
+  std::string scan_topic_name = "/scan"; // TODO determine what topic this actually is from ROS
   topics.push_back(scan_topic_name);
   rosbag::View view(bag, rosbag::TopicQuery(topics));
 
@@ -994,7 +994,7 @@ AmclNode::convertMap( const nav_msgs::OccupancyGrid& map_msg )
   {
     if(map_msg.data[i] == 0)
       map->cells[i].occ_state = -1;
-    else if(map_msg.data[i] == 100)
+    else if(map_msg.data[i] >0)
       map->cells[i].occ_state = +1;
     else
       map->cells[i].occ_state = 0;

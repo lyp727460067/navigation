@@ -273,7 +273,6 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
   size_t clearing_observation_cloud_size = clearing_observation.cloud_->height * clearing_observation.cloud_->width;
   if (clearing_observation_cloud_size == 0)
     return;
-
   double sensor_x, sensor_y, sensor_z;
   double ox = clearing_observation.origin_.x;
   double oy = clearing_observation.origin_.y;
@@ -308,6 +307,35 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
     double wpx = *iter_x;
     double wpy = *iter_y;
     double wpz = *iter_z;
+
+    double wx = *iter_x;
+    double wy = *iter_y;
+ 
+    double inflate_dx = 0.03, inflate_dy = 0.03;  //在原来点的位置膨胀的尺度
+    std::vector<std::pair<double, double> > inflate_pts;
+    inflate_pts.push_back(std::make_pair(wx + 0, wy + 0));
+    inflate_pts.push_back(std::make_pair(wx - 0, wy - inflate_dy));
+    inflate_pts.push_back(std::make_pair(wx - inflate_dx, wy - 0));
+    inflate_pts.push_back(std::make_pair(wx + 0, wy + inflate_dy));
+    inflate_pts.push_back(std::make_pair(wx + inflate_dx, wy + 0));
+    inflate_pts.push_back(std::make_pair(wx - 0, wy - 2 * inflate_dy));
+    inflate_pts.push_back(std::make_pair(wx - 2 * inflate_dx, wy - 0));
+    inflate_pts.push_back(std::make_pair(wx + 0, wy + 2 * inflate_dy));
+    inflate_pts.push_back(std::make_pair(wx + 2 * inflate_dx, wy + 0));
+    inflate_pts.push_back(std::make_pair(wx - 0, wy - 3 * inflate_dy));
+    inflate_pts.push_back(std::make_pair(wx - 3 * inflate_dx, wy - 0));
+    inflate_pts.push_back(std::make_pair(wx + 0, wy + 3 * inflate_dy));
+    inflate_pts.push_back(std::make_pair(wx + 3 * inflate_dx, wy + 0));
+    std::vector<std::pair<double, double> >::iterator inflate_iter;
+
+    for (inflate_iter = inflate_pts.begin(); inflate_iter != inflate_pts.end();
+         inflate_iter++) {
+
+    
+    wpx = (*inflate_iter).first;
+    wpy = (*inflate_iter).second;       
+
+
 
     double distance = dist(ox, oy, oz, wpx, wpy, wpz);
     double scaling_fact = 1.0;
@@ -380,7 +408,7 @@ void VoxelLayer::raytraceFreespace(const Observation& clearing_observation, doub
       }
     }
   }
-
+  }
   if (publish_clearing_points)
   {
     clearing_endpoints_.header.frame_id = global_frame_;
