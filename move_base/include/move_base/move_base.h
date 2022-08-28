@@ -203,6 +203,7 @@ namespace move_base {
 
       MoveBaseState state_;
       RecoveryTrigger recovery_trigger_;
+      ros::ServiceClient service_clients_;
 
       ros::Time last_valid_plan_, last_valid_control_, last_oscillation_reset_;
       geometry_msgs::PoseStamped oscillation_pose_;

@@ -35,16 +35,15 @@
 * Author: Eitan Marder-Eppstein
 *         Mike Phillips (put the planner in its own thread)
 *********************************************************************/
+#include <geometry_msgs/Twist.h>
 #include <move_base/move_base.h>
 #include <move_base_msgs/RecoveryStatus.h>
-#include <cmath>
+#include <nav_msgs/GetPlan.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
-
-#include <geometry_msgs/Twist.h>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <cmath>
 
 namespace move_base {
 
@@ -79,6 +78,8 @@ namespace move_base {
 
     private_nh.param("oscillation_timeout", oscillation_timeout_, 0.0);
     private_nh.param("oscillation_distance", oscillation_distance_, 0.5);
+    service_clients_ =
+        nh.serviceClient<::nav_msgs::GetPlan>("FetchGloblePath");
 
     // parameters of make_plan service
     private_nh.param("make_plan_clear_costmap", make_plan_clear_costmap_, true);
@@ -471,31 +472,47 @@ namespace move_base {
     tc_.reset();
   }
 
-  bool MoveBase::makePlan(const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan){
-    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(*(planner_costmap_ros_->getCostmap()->getMutex()));
+  bool MoveBase::makePlan(const geometry_msgs::PoseStamped& goal,
+                          std::vector<geometry_msgs::PoseStamped>& plan) {
+    boost::unique_lock<costmap_2d::Costmap2D::mutex_t> lock(
+        *(planner_costmap_ros_->getCostmap()->getMutex()));
 
-    //make sure to set the plan to be empty initially
+    // make sure to set the plan to be empty initially
     plan.clear();
 
-    //since this gets called on handle activate
-    if(planner_costmap_ros_ == NULL) {
-      ROS_ERROR("Planner costmap ROS is NULL, unable to create global plan");
+    // //since this gets called on handle activate
+    // if(planner_costmap_ros_ == NULL) {
+    //   ROS_ERROR("Planner costmap ROS is NULL, unable to create global plan");
+    //   return false;
+    // }
+
+    // //get the starting pose of the robot
+    // geometry_msgs::PoseStamped global_pose;
+    // if(!getRobotPose(global_pose, planner_costmap_ros_)) {
+    //   ROS_WARN("Unable to get starting pose of robot, unable to create global
+    //   plan"); return false;
+    // }
+
+    // const geometry_msgs::PoseStamped& start = global_pose;
+
+    // //if the planner fails or returns a zero length plan, planning failed
+    // if(!planner_->makePlan(start, goal, plan) || plan.empty()){
+    //   ROS_DEBUG_NAMED("move_base","Failed to find a  plan to point (%.2f,
+    //   %.2f)", goal.pose.position.x, goal.pose.position.y); return false;
+    // }
+    nav_msgs::GetPlan srv;
+    srv.request.start = geometry_msgs::PoseStamped();
+    //  srv.request.goal =
+    //  srv.request.tolerance
+    if (!service_clients_.call(srv)) {
       return false;
     }
-
-    //get the starting pose of the robot
-    geometry_msgs::PoseStamped global_pose;
-    if(!getRobotPose(global_pose, planner_costmap_ros_)) {
-      ROS_WARN("Unable to get starting pose of robot, unable to create global plan");
+    if (srv.response.plan.poses.empty()) {
       return false;
     }
-
-    const geometry_msgs::PoseStamped& start = global_pose;
-
-    //if the planner fails or returns a zero length plan, planning failed
-    if(!planner_->makePlan(start, goal, plan) || plan.empty()){
-      ROS_DEBUG_NAMED("move_base","Failed to find a  plan to point (%.2f, %.2f)", goal.pose.position.x, goal.pose.position.y);
-      return false;
+    for (const auto& point : srv.response.plan.poses) {
+      ROS_INFO("recive point:%f,%f",point.pose.position.x,point.pose.position.y);
+      plan.push_back(point);
     }
 
     return true;
